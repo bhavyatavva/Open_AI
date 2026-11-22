@@ -1,0 +1,58 @@
+# Local computer only. For a public server, use compose.yaml and HTTPS.
+name: lessonly-local
+x-app: &app
+  build: .
+  image: lessonly-local:2.0.0
+  restart: unless-stopped
+  environment:
+    APP_ENV: development
+    APP_ORIGIN: http://localhost:8080
+    DATABASE_URL: postgresql+psycopg://lessonly:local-development-only@db:5432/lessonly
+    REGISTRATION_CODE: ''
+    OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+    DAILY_JOB_LIMIT: ${DAILY_JOB_LIMIT:-20}
+  read_only: true
+  tmpfs: ['/tmp:size=128m,mode=1777']
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 1g
+  cpus: 2
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lessonly
+      POSTGRES_DB: lessonly
+      # Used only on the isolated local Docker network; no database host port.
+      POSTGRES_PASSWORD: local-development-only
+    volumes: [local_postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U lessonly -d lessonly]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    <<: *app
+    restart: 'no'
+    command: [python, -m, server.manage, migrate]
+    healthcheck: {disable: true}
+    depends_on:
+      db: {condition: service_healthy}
+  web:
+    <<: *app
+    ports: ['127.0.0.1:8080:8080']
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  worker:
+    <<: *app
+    command: [python, -m, server.worker]
+    healthcheck: {disable: true}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+volumes:
+  local_postgres_data:

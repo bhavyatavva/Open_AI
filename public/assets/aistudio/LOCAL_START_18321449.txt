@@ -1,0 +1,58 @@
+LESSONLY - OPEN ON YOUR OWN COMPUTER
+
+You do not need a cloud server or domain to run this local version.
+Internet access is needed for the first build and for AI generation.
+
+WINDOWS / FILE EXPLORER
+1. Download lessonly-client-package.zip to Downloads.
+2. Right-click the ZIP, choose Extract All, and extract it to a normal folder.
+3. Install Docker Desktop and start it. Use Linux containers (the default).
+   https://docs.docker.com/desktop/setup/install/windows-install/
+4. Open the extracted lessonly folder and double-click Start-Lessonly.cmd.
+   Do not run the launcher inside the ZIP. Wait for the build to finish.
+5. Your browser opens http://localhost:8080. Use this exact address.
+6. Click "New to Lessonly? Create an account". Use a password of at least
+   12 characters. Leave the workspace invitation code blank locally.
+
+REAL AI
+You can sign up, view the app, create projects, and upload text-bearing PDFs
+without an API key. Generating educational artifacts requires a valid OpenAI
+API key with API billing/model access. API usage is billed separately.
+
+The first launch creates .env.local in the extracted lessonly folder.
+Open that file in Notepad, put your valid key after OPENAI_API_KEY=, save it,
+and run Start-Lessonly.cmd again. Keep the filename .env.local, not .env.local.txt.
+Do not paste the key into chat or share your configured .env.local file.
+Leave .env.local.example unchanged. The key remains on the server side.
+
+STOP / START AGAIN
+Double-click Stop-Lessonly.cmd to stop. Double-click Start-Lessonly.cmd to
+start again. Closing the browser does not stop the containers.
+Accounts and projects persist in the lessonly-local Docker database volume.
+Do not delete this volume unless you intend to delete the saved local data.
+Your data is not stored in the extracted source folder or included in the ZIP.
+
+MAC / LINUX
+Install and start Docker Desktop, or Docker Engine with Compose v2 on Linux.
+Open Terminal in the extracted lessonly folder and run:
+  sh start-local.sh
+Then open http://localhost:8080. Account and API setup are the same as above.
+Stop with:
+  docker compose --env-file .env.local.example -f compose.local.yaml stop
+
+IF STARTUP FAILS
+- Make sure Docker Desktop is running and has finished starting.
+- The first build needs internet access and can take several minutes.
+- If port 8080 is already allocated, stop the other app using it, then retry.
+- If you see "This request must come from the application", use
+  http://localhost:8080 rather than 127.0.0.1 or a file:// URL.
+- Open a terminal in this folder to inspect status:
+  docker compose --env-file .env.local -f compose.local.yaml ps -a
+- Read recent service logs (do not share credentials):
+  docker compose --env-file .env.local -f compose.local.yaml logs --tail=80 web worker migrate db
+
+This is a local HTTP installation, bound to your computer's loopback address.
+For client hosting and HTTPS, follow README.md and DEPLOY_FROM_ZERO.md using
+compose.yaml. Do not expose this local configuration as a public server.
+Docker runtime launch is not verified in the build environment because Docker
+is unavailable there. See TEST_REPORT.md for completed tests and remaining checks.

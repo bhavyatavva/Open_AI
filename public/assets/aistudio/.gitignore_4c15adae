@@ -1,0 +1,14 @@
+.env
+.env.local
+.env-rotate-*
+deployment-verification*.json
+.venv/
+__pycache__/
+*.pyc
+*.db*
+.pytest_cache/
+.coverage
+htmlcov/
+web/node_modules/
+web/dist/
+backups/

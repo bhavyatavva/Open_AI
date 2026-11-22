@@ -1,0 +1,6 @@
+{
+  "name": "Lessonly Teaching Studio",
+  "description": "Turn lecture notes, chapters, and lesson outlines into grounded lesson plans, quiz banks, study guides, flashcards, rubrics, and exportable teaching kits.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

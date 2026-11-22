@@ -1,0 +1,73 @@
+name: lessonly
+x-app: &app
+  build: .
+  image: lessonly:2.0.0
+  restart: unless-stopped
+  environment: &environment
+    APP_ENV: production
+    APP_ORIGIN: https://${DOMAIN:?Set DOMAIN in .env}
+    DATABASE_URL: postgresql+psycopg://lessonly:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/lessonly
+    REGISTRATION_CODE: ${REGISTRATION_CODE:?Set REGISTRATION_CODE in .env}
+    OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in .env}
+    OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+    DAILY_JOB_LIMIT: ${DAILY_JOB_LIMIT:-20}
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,mode=1777
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 1g
+  cpus: 2
+  logging:
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lessonly
+      POSTGRES_DB: lessonly
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U lessonly -d lessonly]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  migrate:
+    <<: *app
+    restart: 'no'
+    command: [python, -m, server.manage, migrate]
+    healthcheck: {disable: true}
+    depends_on:
+      db: {condition: service_healthy}
+  web:
+    <<: *app
+    environment:
+      <<: *environment
+      # The web process only checks configuration; generation occurs in worker.
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  worker:
+    <<: *app
+    command: [python, -m, server.worker]
+    healthcheck: {disable: true}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web: {condition: service_healthy}
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
